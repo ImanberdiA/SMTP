@@ -1,0 +1,72 @@
+digraph {
+    resolving_dns [label="resolving\ndns"];
+    connecting;
+    receiving_greeting [label="receiving\ngreeting"];
+    sending_helo [label="sending\nhelo"];
+    sending_mail_or_rcpt [label="sending\nmail or rcpt"];
+    sending_data [label="sending\ndata"];
+    loading_message_body [label="loading\nmessage body"];
+    sending_data_payload [label="sending\ndata payload"];
+    sending_rset [label="sending\nrset"];
+    sending_quit [label="sending\nquit"];
+    closed;
+
+    resolving_dns -> connecting [label="try another\naddress"];
+    resolving_dns -> closed [label="no other\naddresses"];
+
+    connecting -> receiving_greeting [label="connected"];
+    connecting -> resolving_dns [label="connection\nfailed"];
+
+    receiving_greeting -> sending_helo [label="received\ncode 220"];
+    receiving_greeting -> sending_quit [label="received\ncode 554"];
+    receiving_greeting -> closed [label="received\nunexpected code"];
+
+    sending_helo -> sending_mail_or_rcpt [
+        label="received\ncode 250 &\nmessages pending\nin queue",
+    ];
+    sending_helo -> sending_quit [
+        label="received\ncode 250 &\nmessage queue\nempty",
+    ];
+    sending_helo -> closed [label="received\nunexpected code"];
+
+    sending_mail_or_rcpt -> sending_mail_or_rcpt [
+        label="received\ncode 250 &\nunsent\nrecepients",
+    ]
+    sending_mail_or_rcpt -> loading_message_body [
+        label="received\ncode 250 & all\nrecepients\nsent & message\nbody still\nloading",
+    ]
+    sending_mail_or_rcpt -> sending_data [
+        label="received\ncode 250 & all\nrecepients\nsent & message\nbody loaded\nsuccessfully",
+    ]
+    sending_mail_or_rcpt -> sending_rset [
+        label="received\ncode 250 & all\nrecepients\nsent & message\nbody loading\nfailed",
+    ]
+    sending_mail_or_rcpt -> closed [label="received\nunexpected code"];
+
+    sending_data -> sending_data_payload [
+        label="received\ncode 354",
+    ]
+    sending_data -> closed [label="received\nunexpected code"];
+
+    loading_message_body -> loading_message_body [label="still\nloading"];
+    loading_message_body -> sending_data [label="loaded\nsuccessfully"];
+    loading_message_body -> sending_rset [label="loading\nfailed"];
+
+    sending_data_payload -> sending_mail_or_rcpt [
+        label="received\ncode 250 &\nmessages pending\nin queue",
+    ];
+    sending_data_payload -> sending_quit [
+        label="received\ncode 250 &\nmessage queue\nempty",
+    ];
+    sending_data_payload -> closed [label="received\nunexpected code"];
+
+    sending_rset -> sending_mail_or_rcpt [
+        label="received\ncode 250 &\nmessages pending\nin queue",
+    ];
+    sending_rset -> sending_quit [
+        label="received\ncode 250 &\nmessage queue\nempty",
+    ];
+    sending_rset -> closed [label="received\nunexpected code"];
+
+    sending_quit -> closed;
+}
